@@ -19,26 +19,25 @@ jobs:
     - name: Set contributor points
       id: set_points
       run: |
-        POINTS=0
-        if [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "small") ]]; then
-          POINTS=5
-        elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "medium") ]]; then
+        POINTS=5 # Default to small (5 points)
+        if [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "medium") ]]; then
           POINTS=10
         elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "large") ]]; then
           POINTS=15
         fi
-        echo "::set-output name=points::$POINTS"
+        echo "POINTS=$POINTS" >> $GITHUB_ENV # Replacing set-output with the recommended method
 
     - name: Get current leaderboard
       uses: actions/github-script@v6
       id: leaderboard
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const issue_number = 1; # Replace with your leaderboard issue number
           const repo_owner = 'galaxy-bytes'; # Replace with your org or repo owner
           const repo_name = 'main-test-repo'; # Replace with the repo containing the leaderboard issue
           
-          const { data: issue } = await github.issues.get({
+          const { data: issue } = await github.rest.issues.get({
             owner: repo_owner,
             repo: repo_name,
             issue_number: issue_number
@@ -49,19 +48,18 @@ jobs:
     - name: Update leaderboard
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const contributor = github.actor;
-          const new_points = ${{ steps.set_points.outputs.points }};
+          const new_points = parseInt(process.env.POINTS); # Using the updated POINTS value from env file
           const leaderboard = ${{ steps.leaderboard.outputs.result }};
           
           let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
 
-          await github.issues.update({
+          await github.rest.issues.update({
             owner: 'your-org',
             repo: 'Repo-A',
             issue_number: 123, # Replace with the actual issue number
             body: updated_leaderboard
           });
 
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
