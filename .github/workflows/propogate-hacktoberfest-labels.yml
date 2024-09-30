@@ -23,23 +23,25 @@ jobs:
       uses: actions/github-script@v6
       id: issue_labels
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}  # This ensures you're authenticated to the GitHub API
         script: |
           const issue_number = ${{ steps.issue_number.outputs.issue_number }};
-          const { data: issue } = await github.issues.get({
+          const issue = await github.rest.issues.get({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issue_number
           });
-          return issue.labels.map(label => label.name);
+          return issue.data.labels.map(label => label.name);
 
     - name: Add labels to PR
       if: steps.issue_number.outputs.issue_number != ''
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const pr_number = context.issue.number;
           const labels = ${{ steps.issue_labels.outputs.result }};
-          await github.issues.addLabels({
+          await github.rest.issues.addLabels({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: pr_number,
