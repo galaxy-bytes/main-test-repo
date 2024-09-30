@@ -33,9 +33,9 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const issue_number = 1; # Replace with your leaderboard issue number
-          const repo_owner = 'galaxy-bytes'; # Replace with your org or repo owner
-          const repo_name = 'main-test-repo'; # Replace with the repo containing the leaderboard issue
+          const issue_number = 1;
+          const repo_owner = 'galaxy-bytes';
+          const repo_name = 'main-test-repo';
           
           const { data: issue } = await github.rest.issues.get({
             owner: repo_owner,
@@ -51,7 +51,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const contributor = github.actor;
-          const new_points = parseInt(process.env.POINTS); # Using the updated POINTS value from env file
+          const new_points = parseInt(process.env.POINTS); 
           const leaderboard = ${{ steps.leaderboard.outputs.result }};
           
           let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
