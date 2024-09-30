@@ -53,7 +53,7 @@ jobs:
         }
 
         issue_content = f"""# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆
-Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution.
+Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyones efforts, it also brings an amplified competitive vibe with each contribution.
 
 ### 🌟 **Current Rankings:**
 {leaderboard_content}
