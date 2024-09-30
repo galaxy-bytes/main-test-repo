@@ -1,0 +1,75 @@
+name: Update Hacktoberfest Leaderboard
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-leaderboard:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4
+
+    - name: Fetch website data and update GitHub issue
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        import os
+        import requests
+        from bs4 import BeautifulSoup
+
+        # Fetch data from the website
+        website_url = "https://leaderboard-nk9strn08-blackgirlbytes-projects.vercel.app"
+        response = requests.get(website_url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Extract table data
+        table = soup.find('table')
+        rows = table.find_all('tr')[1:]
+        
+        # Format data for GitHub issue
+        leaderboard_content = "| Rank | Username | Points | PRs |\n"
+        leaderboard_content += "|------|----------|--------|-----|\n"
+        for row in rows:
+            cols = row.find_all('td')
+            leaderboard_content += f"| {cols[0].text.strip()} | {cols[1].text.strip()} | {cols[2].text.strip()} | {cols[3].text.strip()} |\n"
+
+        # GitHub API request to update the issue
+        issue_url = "https://api.github.com/repos/galaxy-bytes/main-test-repo/issues/1"
+            "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+
+        issue_content = f"""# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆
+Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution.
+
+### 🌟 **Current Rankings:**
+{leaderboard_content}
+### 📜 How It Works:
+The top 10 contributors with the most points will snag custom swag with this year's exclusive TBD x Hacktoberfest 2024 design. To earn your place in the leaderboard, we have created a points system that is explained below. As you complete a task by successfully merging a PR, you will automatically be granted a certain number of points.
+
+#### 💯 Point System
+| Weight | Points Awarded | Description |
+|--------|----------------|-------------|
+| 🐭 **Small** | 5 points | For smaller tasks that take limited time to complete and/or don't require any product knowledge. |
+"""
+
+        # Update the issue
+        response = requests.patch(issue_url, headers=headers, json={"body": issue_content})
+
+        if response.status_code == 200:
+            print("Leaderboard issue updated successfully!")
+        else:
+            print(f"Failed to update leaderboard issue. Status code: {response.status_code}")
