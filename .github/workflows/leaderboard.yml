@@ -34,9 +34,9 @@ jobs:
       id: leaderboard
       with:
         script: |
-          const issue_number = 123; # Replace with your leaderboard issue number
-          const repo_owner = 'your-org'; # Replace with your org or repo owner
-          const repo_name = 'Repo-A'; # Replace with the repo containing the leaderboard issue
+          const issue_number = 1; # Replace with your leaderboard issue number
+          const repo_owner = 'galaxy-bytes'; # Replace with your org or repo owner
+          const repo_name = 'main-test-repo'; # Replace with the repo containing the leaderboard issue
           
           const { data: issue } = await github.issues.get({
             owner: repo_owner,
