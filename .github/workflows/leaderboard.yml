@@ -7,29 +7,22 @@ on:
 jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Check if the PR was merged
-      if: github.event.pull_request.merged == true
-      run: echo "PR merged"
-
     - name: Set contributor points
       id: set_points
       run: |
         POINTS=5 # Default to small (5 points)
-        if [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "medium") ]]; then
+        if [[ "${{ join(github.event.pull_request.labels.*.name, ' ') }}" =~ medium ]]; then
           POINTS=10
-        elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "large") ]]; then
+        elif [[ "${{ join(github.event.pull_request.labels.*.name, ' ') }}" =~ large ]]; then
           POINTS=15
         fi
         echo "POINTS=$POINTS" >> $GITHUB_ENV
 
-    - name: Get current leaderboard
+    - name: Update leaderboard
       uses: actions/github-script@v6
-      id: leaderboard
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -37,65 +30,69 @@ jobs:
           const repo_owner = 'galaxy-bytes'; // Replace with your org or repo owner
           const repo_name = 'main-test-repo'; // Replace with the repo containing the leaderboard issue
           
-          const { data: issue } = await github.rest.issues.get({
-            owner: repo_owner,
-            repo: repo_name,
-            issue_number: issue_number
-          });
-          
-          return issue.body;
+          const contributor = context.payload.pull_request.user.login;
+          const new_points = parseInt(process.env.POINTS);
 
-    - name: Update leaderboard
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const contributor = github.actor;
-          const new_points = parseInt(process.env.POINTS); // Use the POINTS value from env
-          let leaderboard = ${{ steps.leaderboard.outputs.result }};
-
-          // Function to update the leaderboard
-          function updateLeaderboard(contributor, new_points, leaderboard) {
-            let lines = leaderboard.split('\n');
-            let updated = false;
-
-            // Process only valid table lines (those containing '|' characters)
-            let updatedLeaderboard = lines.map(line => {
-              if (line.includes('|')) {
-                let parts = line.split('|');
-                if (parts.length > 3 && parts[3] !== undefined) {
-                  let currentPoints = parseInt(parts[3].trim()) || 0;
-                  let newTotalPoints = currentPoints + new_points;
-                  parts[3] = ` ${newTotalPoints} `;
-                  updated = true;
-                  return parts.join('|');
-                }
-              }
-              return line;
+          async function updateLeaderboard() {
+            // Fetch current leaderboard
+            const { data: issue } = await github.rest.issues.get({
+              owner: repo_owner,
+              repo: repo_name,
+              issue_number: issue_number
             });
-
-            // If the contributor was not found, add them
-            if (!updated) {
-              updatedLeaderboard.splice(3, 0, `| ${contributor} | 1 | ${new_points} |`);
+            
+            let lines = issue.body.split('\n');
+            let tableStart = lines.findIndex(line => line.trim().startsWith('| Rank | Contributor'));
+            let tableEnd = lines.findIndex((line, index) => index > tableStart && line.trim() === '');
+            
+            if (tableStart === -1 || tableEnd === -1) {
+              console.log('Could not find the leaderboard table in the issue body. Creating a new one.');
+              tableStart = lines.findIndex(line => line.includes('Current Rankings:')) + 1;
+              lines.splice(tableStart, 0, '| Rank | Contributor | Number of Merged PRs | Total Points |');
+              lines.splice(tableStart + 1, 0, '|------|----------------|----------------------|--------------|');
+              tableEnd = tableStart + 2;
             }
 
-            // Sort leaderboard by points (ignoring header lines)
-            updatedLeaderboard = updatedLeaderboard.sort((a, b) => {
-              if (!a.includes('|') || !b.includes('|')) return 0; // Ignore non-table lines
-              let aPoints = parseInt(a.split('|')[3].trim()) || 0;
-              let bPoints = parseInt(b.split('|')[3].trim()) || 0;
+            let tableLines = lines.slice(tableStart + 2, tableEnd);
+            let contributorEntry = tableLines.find(line => line.includes(contributor));
+
+            if (contributorEntry) {
+              let parts = contributorEntry.split('|');
+              let currentPRs = parseInt(parts[2].trim()) || 0;
+              let currentPoints = parseInt(parts[3].trim()) || 0;
+              parts[2] = ` ${currentPRs + 1} `;
+              parts[3] = ` ${currentPoints + new_points} `;
+              contributorEntry = parts.join('|');
+            } else {
+              contributorEntry = `| | ${contributor} | 1 | ${new_points} |`;
+              tableLines.push(contributorEntry);
+            }
+
+            tableLines = tableLines.filter(line => line.trim() !== '');
+
+            tableLines.sort((a, b) => {
+              let aPoints = parseInt(a.split('|')[3]?.trim()) || 0;
+              let bPoints = parseInt(b.split('|')[3]?.trim()) || 0;
               return bPoints - aPoints;
             });
 
-            return updatedLeaderboard.join('\n');
+            tableLines = tableLines.map((line, index) => {
+              let parts = line.split('|');
+              parts[1] = ` ${index + 1} `;
+              return parts.join('|');
+            });
+
+            lines.splice(tableStart + 2, tableEnd - tableStart - 2, ...tableLines);
+
+            // Update the issue with the new content
+            await github.rest.issues.update({
+              owner: repo_owner,
+              repo: repo_name,
+              issue_number: issue_number,
+              body: lines.join('\n')
+            });
+
+            console.log('Leaderboard updated successfully.');
           }
 
-          // Call the updateLeaderboard function and update the issue
-          let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
-
-          await github.rest.issues.update({
-            owner: 'galaxy-bytes',
-            repo: 'main-test-repo',
-            issue_number: 1, // Replace with the actual issue number
-            body: updated_leaderboard
-          });
+          await updateLeaderboard();
