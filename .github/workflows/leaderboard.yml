@@ -25,7 +25,7 @@ jobs:
         elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "large") ]]; then
           POINTS=15
         fi
-        echo "POINTS=$POINTS" >> $GITHUB_ENV # Replacing set-output with the recommended method
+        echo "POINTS=$POINTS" >> $GITHUB_ENV
 
     - name: Get current leaderboard
       uses: actions/github-script@v6
@@ -33,9 +33,9 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const issue_number = 1;
-          const repo_owner = 'galaxy-bytes';
-          const repo_name = 'main-test-repo';
+          const issue_number = 1; // Replace with your leaderboard issue number
+          const repo_owner = 'galaxy-bytes'; // Replace with your org or repo owner
+          const repo_name = 'main-test-repo'; // Replace with the repo containing the leaderboard issue
           
           const { data: issue } = await github.rest.issues.get({
             owner: repo_owner,
@@ -51,9 +51,42 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const contributor = github.actor;
-          const new_points = parseInt(process.env.POINTS); 
-          const leaderboard = ${{ steps.leaderboard.outputs.result }};
-          
+          const new_points = parseInt(process.env.POINTS); // Using the updated POINTS value from env file
+          let leaderboard = ${{ steps.leaderboard.outputs.result }};
+
+          // Function to update the leaderboard
+          function updateLeaderboard(contributor, new_points, leaderboard) {
+            let lines = leaderboard.split('\n');
+            let updated = false;
+
+            // Update leaderboard with the new contributor or update their score
+            let updatedLeaderboard = lines.map(line => {
+              if (line.includes(contributor)) {
+                let parts = line.split('|');
+                let currentPoints = parseInt(parts[3].trim()) || 0;
+                let newTotalPoints = currentPoints + new_points;
+                parts[3] = ` ${newTotalPoints} `;
+                updated = true;
+                return parts.join('|');
+              }
+              return line;
+            });
+
+            if (!updated) {
+              updatedLeaderboard.splice(3, 0, `| ${contributor} | 1 | ${new_points} |`);
+            }
+
+            // Sort leaderboard by points
+            updatedLeaderboard = updatedLeaderboard.sort((a, b) => {
+              let aPoints = parseInt(a.split('|')[3].trim()) || 0;
+              let bPoints = parseInt(b.split('|')[3].trim()) || 0;
+              return bPoints - aPoints;
+            });
+
+            return updatedLeaderboard.join('\n');
+          }
+
+          // Call the updateLeaderboard function and update the issue
           let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
 
           await github.rest.issues.update({
@@ -62,4 +95,3 @@ jobs:
             issue_number: 1,
             body: updated_leaderboard
           });
-
