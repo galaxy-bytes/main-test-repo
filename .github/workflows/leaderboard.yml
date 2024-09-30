@@ -1,0 +1,67 @@
+name: Hacktoberfest Leaderboard
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-leaderboard:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Check if the PR was merged
+      if: github.event.pull_request.merged == true
+      run: echo "PR merged"
+
+    - name: Set contributor points
+      id: set_points
+      run: |
+        POINTS=0
+        if [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "small") ]]; then
+          POINTS=5
+        elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "medium") ]]; then
+          POINTS=10
+        elif [[ $(echo "${{ github.event.pull_request.labels }}" | grep -q "large") ]]; then
+          POINTS=15
+        fi
+        echo "::set-output name=points::$POINTS"
+
+    - name: Get current leaderboard
+      uses: actions/github-script@v6
+      id: leaderboard
+      with:
+        script: |
+          const issue_number = 123; # Replace with your leaderboard issue number
+          const repo_owner = 'your-org'; # Replace with your org or repo owner
+          const repo_name = 'Repo-A'; # Replace with the repo containing the leaderboard issue
+          
+          const { data: issue } = await github.issues.get({
+            owner: repo_owner,
+            repo: repo_name,
+            issue_number: issue_number
+          });
+          
+          return issue.body;
+
+    - name: Update leaderboard
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const contributor = github.actor;
+          const new_points = ${{ steps.set_points.outputs.points }};
+          const leaderboard = ${{ steps.leaderboard.outputs.result }};
+          
+          let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
+
+          await github.issues.update({
+            owner: 'your-org',
+            repo: 'Repo-A',
+            issue_number: 123, # Replace with the actual issue number
+            body: updated_leaderboard
+          });
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
