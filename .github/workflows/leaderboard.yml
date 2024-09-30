@@ -57,9 +57,9 @@ jobs:
           let updated_leaderboard = updateLeaderboard(contributor, new_points, leaderboard);
 
           await github.rest.issues.update({
-            owner: 'your-org',
-            repo: 'Repo-A',
-            issue_number: 123, # Replace with the actual issue number
+            owner: 'galaxy-bytes',
+            repo: 'main-test-repo',
+            issue_number: 1,
             body: updated_leaderboard
           });
 
