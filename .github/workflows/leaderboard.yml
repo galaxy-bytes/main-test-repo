@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v2
 
     - name: Check if the PR was merged
@@ -51,7 +51,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const contributor = github.actor;
-          const new_points = parseInt(process.env.POINTS); // Using the updated POINTS value from env file
+          const new_points = parseInt(process.env.POINTS); // Use the POINTS value from env
           let leaderboard = ${{ steps.leaderboard.outputs.result }};
 
           // Function to update the leaderboard
