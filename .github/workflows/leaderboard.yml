@@ -59,25 +59,29 @@ jobs:
             let lines = leaderboard.split('\n');
             let updated = false;
 
-            // Update leaderboard with the new contributor or update their score
+            // Process only valid table lines (those containing '|' characters)
             let updatedLeaderboard = lines.map(line => {
-              if (line.includes(contributor)) {
+              if (line.includes('|')) {
                 let parts = line.split('|');
-                let currentPoints = parseInt(parts[3].trim()) || 0;
-                let newTotalPoints = currentPoints + new_points;
-                parts[3] = ` ${newTotalPoints} `;
-                updated = true;
-                return parts.join('|');
+                if (parts.length > 3 && parts[3] !== undefined) {
+                  let currentPoints = parseInt(parts[3].trim()) || 0;
+                  let newTotalPoints = currentPoints + new_points;
+                  parts[3] = ` ${newTotalPoints} `;
+                  updated = true;
+                  return parts.join('|');
+                }
               }
               return line;
             });
 
+            // If the contributor was not found, add them
             if (!updated) {
               updatedLeaderboard.splice(3, 0, `| ${contributor} | 1 | ${new_points} |`);
             }
 
-            // Sort leaderboard by points
+            // Sort leaderboard by points (ignoring header lines)
             updatedLeaderboard = updatedLeaderboard.sort((a, b) => {
+              if (!a.includes('|') || !b.includes('|')) return 0; // Ignore non-table lines
               let aPoints = parseInt(a.split('|')[3].trim()) || 0;
               let bPoints = parseInt(b.split('|')[3].trim()) || 0;
               return bPoints - aPoints;
@@ -92,6 +96,6 @@ jobs:
           await github.rest.issues.update({
             owner: 'galaxy-bytes',
             repo: 'main-test-repo',
-            issue_number: 1,
+            issue_number: 1, // Replace with the actual issue number
             body: updated_leaderboard
           });
