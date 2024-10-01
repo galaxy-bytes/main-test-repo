@@ -1,4 +1,4 @@
-name: Update Hacktoberfest Leaderboard
+name: Update Leaderboard from Website
 
 on:
   schedule:
@@ -9,7 +9,7 @@ jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
+    - name: Checkout main repo
       uses: actions/checkout@v2
 
     - name: Setup Node.js
@@ -20,59 +20,68 @@ jobs:
     - name: Install dependencies
       run: npm install axios cheerio
 
-    - name: Create update script
-      run: |
-        cat << 'EOT' > update_leaderboard.js
-        const axios = require('axios');
-        const cheerio = require('cheerio');
+    - name: Update leaderboard
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const axios = require('axios');
+          const cheerio = require('cheerio');
 
-        async function updateLeaderboard() {
-          try {
+          async function fetchLeaderboardData() {
             const websiteUrl = 'https://leaderboard-nk9strn08-blackgirlbytes-projects.vercel.app';
             const { data } = await axios.get(websiteUrl);
             const $ = cheerio.load(data);
-
-            let leaderboardContent = '| Rank | Username | Points | PRs |\n|------|----------|--------|-----|\n';
-            $('table tr').slice(1).each((i, elem) => {
-              const tds = $(elem).find('td');
-              leaderboardContent += `| ${$(tds[0]).text().trim()} | ${$(tds[1]).text().trim()} | ${$(tds[2]).text().trim()} | ${$(tds[3]).text().trim()} |\n`;
+            
+            let leaderboardData = [];
+            $('table tr').slice(1).each((index, element) => {
+              const tds = $(element).find('td');
+              leaderboardData.push({
+                rank: index + 1,
+                contributor: $(tds[1]).text().trim(),
+                prs: parseInt($(tds[3]).text().trim(), 10),
+                points: parseInt($(tds[2]).text().trim(), 10)
+              });
             });
-
-            const issueContent = `# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆
-        Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution.
-
-        ### 🌟 **Current Rankings:**
-        ${leaderboardContent}
-        ### 📜 How It Works:
-        The top 10 contributors with the most points will snag custom swag with this year's exclusive TBD x Hacktoberfest 2024 design. To earn your place in the leaderboard, we have created a points system that is explained below. As you complete a task by successfully merging a PR, you will automatically be granted a certain number of points.
-
-        #### 💯 Point System
-        | Weight | Points Awarded | Description |
-        |--------|----------------|-------------|
-        | 🐭 **Small** | 5 points | For smaller tasks that take limited time to complete and/or don't require any product knowledge. |`;
-
-            const issueUrl = 'https://api.github.com/repos/galaxy-bytes/main-test-repo/issues/1';
-            await axios.patch(issueUrl, 
-              { body: issueContent },
-              { 
-                headers: {
-                  'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                  'Accept': 'application/vnd.github.v3+json'
-                }
-              }
-            );
-
-            console.log('Leaderboard issue updated successfully!');
-          } catch (error) {
-            console.error('Error updating leaderboard:', error.message);
-            process.exit(1);
+            
+            return leaderboardData;
           }
-        }
 
-        updateLeaderboard();
-        EOT
+          const issue_number = 1;  // Replace with your leaderboard issue number
+          
+          // Fetch the current issue content
+          const { data: issue } = await github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue_number
+          });
 
-    - name: Run update script
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: node update_leaderboard.js
+          // Fetch the leaderboard data from the website
+          const leaderboardData = await fetchLeaderboardData();
+
+          // Prepare the new issue content
+          let newContent = `# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆
+          Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution.
+
+          ### 🌟 **Current Rankings:**
+          | Rank | Contributor | Number of Merged PRs | Total Points |
+          |------|----------------|----------------------|--------------|
+          ${leaderboardData.map(entry => `| ${entry.rank} | ${entry.contributor} | ${entry.prs} | ${entry.points} |`).join('\n')}
+
+          ### 📜 How It Works:
+          The top 10 contributors with the most points will snag custom swag with this year's exclusive TBD x Hacktoberfest 2024 design. To earn your place in the leaderboard, we have created a points system that is explained below. As you complete a task by successfully merging a PR, you will automatically be granted a certain number of points.
+
+          #### 💯 Point System
+          | Weight | Points Awarded | Description |
+          |--------|----------------|-------------|
+          | 🐭 **Small** | 5 points | For smaller tasks that take limited time to complete and/or don't require any product knowledge. |`;
+
+          // Update the issue with the new content
+          await github.rest.issues.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue_number,
+            body: newContent
+          });
+
+          console.log('Leaderboard updated successfully.');
