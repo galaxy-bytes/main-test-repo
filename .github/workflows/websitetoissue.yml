@@ -15,66 +15,60 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '18'  # Updated to a more recent version
+        node-version: '18'
 
     - name: Install dependencies
       run: npm install axios cheerio
 
     - name: Create update script
       run: |
-        cat << EOF > update_leaderboard.js
-        const axios = require('axios');
-        const cheerio = require('cheerio');
-
-        async function updateLeaderboard() {
-          try {
-            // Fetch data from the website
-            const websiteUrl = 'https://leaderboard-nk9strn08-blackgirlbytes-projects.vercel.app';
-            const { data } = await axios.get(websiteUrl);
-            const $ = cheerio.load(data);
-
-            // Extract table data
-            let leaderboardContent = '| Rank | Username | Points | PRs |\n|------|----------|--------|-----|\n';
-            $('table tr').slice(1).each((i, elem) => {
-              const tds = $(elem).find('td');
-              leaderboardContent += `| ${$(tds[0]).text().trim()} | ${$(tds[1]).text().trim()} | ${$(tds[2]).text().trim()} | ${$(tds[3]).text().trim()} |\n`;
-            });
-
-            // Prepare issue content
-            const issueContent = `# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆
-            Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution.
-
-            ### 🌟 **Current Rankings:**
-            ${leaderboardContent}
-            ### 📜 How It Works:
-            The top 10 contributors with the most points will snag custom swag with this year's exclusive TBD x Hacktoberfest 2024 design. To earn your place in the leaderboard, we have created a points system that is explained below. As you complete a task by successfully merging a PR, you will automatically be granted a certain number of points.
-
-            #### 💯 Point System
-            | Weight | Points Awarded | Description |
-            |--------|----------------|-------------|
-            | 🐭 **Small** | 5 points | For smaller tasks that take limited time to complete and/or don't require any product knowledge. |`;
-
-            // Update GitHub issue
-            const issueUrl = 'https://api.github.com/repos/galaxy-bytes/main-test-repo/issues/1';
-            await axios.patch(issueUrl, 
-              { body: issueContent },
-              { 
-                headers: {
-                  'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                  'Accept': 'application/vnd.github.v3+json'
-                }
-              }
-            );
-
-            console.log('Leaderboard issue updated successfully!');
-          } catch (error) {
-            console.error('Error updating leaderboard:', error.message);
-            process.exit(1);
-          }
-        }
-
-        updateLeaderboard();
-        EOF
+        echo "const axios = require('axios');" > update_leaderboard.js
+        echo "const cheerio = require('cheerio');" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "async function updateLeaderboard() {" >> update_leaderboard.js
+        echo "  try {" >> update_leaderboard.js
+        echo "    const websiteUrl = 'https://leaderboard-nk9strn08-blackgirlbytes-projects.vercel.app';" >> update_leaderboard.js
+        echo "    const { data } = await axios.get(websiteUrl);" >> update_leaderboard.js
+        echo "    const $ = cheerio.load(data);" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "    let leaderboardContent = '| Rank | Username | Points | PRs |\\n|------|----------|--------|-----|\\n';" >> update_leaderboard.js
+        echo "    $('table tr').slice(1).each((i, elem) => {" >> update_leaderboard.js
+        echo "      const tds = $(elem).find('td');" >> update_leaderboard.js
+        echo "      leaderboardContent += \`| \${$(tds[0]).text().trim()} | \${$(tds[1]).text().trim()} | \${$(tds[2]).text().trim()} | \${$(tds[3]).text().trim()} |\\n\`;" >> update_leaderboard.js
+        echo "    });" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "    const issueContent = \`# 🏆 TBD Hacktoberfest 2024 Leaderboard 🏆" >> update_leaderboard.js
+        echo "Hello, lovely contributors! As Hacktoberfest 2024 and the crisp Fall breeze refreshes us, we wanted to make the contribution process extra fun. Check our live leaderboard below to see who our top contributors are this year in real-time. Not only does this recognize everyone's efforts, it also brings an amplified competitive vibe with each contribution." >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "### 🌟 **Current Rankings:**" >> update_leaderboard.js
+        echo "\${leaderboardContent}" >> update_leaderboard.js
+        echo "### 📜 How It Works:" >> update_leaderboard.js
+        echo "The top 10 contributors with the most points will snag custom swag with this year's exclusive TBD x Hacktoberfest 2024 design. To earn your place in the leaderboard, we have created a points system that is explained below. As you complete a task by successfully merging a PR, you will automatically be granted a certain number of points." >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "#### 💯 Point System" >> update_leaderboard.js
+        echo "| Weight | Points Awarded | Description |" >> update_leaderboard.js
+        echo "|--------|----------------|-------------|" >> update_leaderboard.js
+        echo "| 🐭 **Small** | 5 points | For smaller tasks that take limited time to complete and/or don't require any product knowledge. |\`;" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "    const issueUrl = 'https://api.github.com/repos/galaxy-bytes/main-test-repo/issues/1';" >> update_leaderboard.js
+        echo "    await axios.patch(issueUrl, " >> update_leaderboard.js
+        echo "      { body: issueContent }," >> update_leaderboard.js
+        echo "      { " >> update_leaderboard.js
+        echo "        headers: {" >> update_leaderboard.js
+        echo "          'Authorization': \`token \${process.env.GITHUB_TOKEN}\`," >> update_leaderboard.js
+        echo "          'Accept': 'application/vnd.github.v3+json'" >> update_leaderboard.js
+        echo "        }" >> update_leaderboard.js
+        echo "      }" >> update_leaderboard.js
+        echo "    );" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "    console.log('Leaderboard issue updated successfully!');" >> update_leaderboard.js
+        echo "  } catch (error) {" >> update_leaderboard.js
+        echo "    console.error('Error updating leaderboard:', error.message);" >> update_leaderboard.js
+        echo "    process.exit(1);" >> update_leaderboard.js
+        echo "  }" >> update_leaderboard.js
+        echo "}" >> update_leaderboard.js
+        echo "" >> update_leaderboard.js
+        echo "updateLeaderboard();" >> update_leaderboard.js
 
     - name: Run update script
       env:
